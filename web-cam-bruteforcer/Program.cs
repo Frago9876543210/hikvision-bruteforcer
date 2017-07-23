@@ -40,7 +40,7 @@ namespace web_cam_bruteforcer
             if (!File.Exists(OutputFile))
                 File.Create(OutputFile).Dispose();
 
-            if (!File.Exists(IpsFile) || !File.Exists(LoginFile) || !File.Exists(PasswordFile))
+            if (!File.Exists(IpsFile) || !File.Exists(PortsFile) || !File.Exists(LoginFile) || !File.Exists(PasswordFile))
             {
                 Console.WriteLine("Failed to load data");
                 Environment.Exit(0);
