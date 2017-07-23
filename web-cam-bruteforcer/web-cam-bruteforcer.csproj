@@ -42,9 +42,6 @@
     <Compile Include="Properties\CHCNetSDK.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
     <COMReference Include="mscorlib">
       <Guid>{BED7F4EA-1A96-11D2-8F08-00A0C9A6186D}</Guid>
       <VersionMajor>2</VersionMajor>
@@ -52,7 +49,6 @@
       <Lcid>0</Lcid>
       <WrapperTool>tlbimp</WrapperTool>
       <Isolated>False</Isolated>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
     </COMReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
