@@ -5019,7 +5019,7 @@ namespace HCNetSDK
         public const int NET_DVR_ENCODER_S264 = 2;
         public const int NET_DVR_ENCODER_MPEG4 = 3;
         public const int NET_DVR_ORIGINALSTREAM = 4;
-        public const int NET_DVR_PICTURE = 5;/
+        public const int NET_DVR_PICTURE = 5;
         public const int NET_DVR_ENCODER_MJPEG = 6;
         public const int NET_DVR_ECONDER_MPEG2 = 7;
 
@@ -12121,7 +12121,7 @@ namespace HCNetSDK
             public uint dwLocCamId;
             public byte byValid;
             public byte byPtzCtrl;
-            public byte byUseType; /
+            public byte byUseType;
             public byte byUsedByTrunk;
             public byte byTrunkReq;
 
