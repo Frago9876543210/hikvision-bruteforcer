@@ -17,17 +17,13 @@ namespace web_cam_bruteforcer
         public static string LoginFile = "data/logins.txt";
         public static string PasswordFile = "data/passwords.txt";
         public static string PicturesDir = "pictures";
-
         public static string OutputFile = "output.txt";
 
         static void Main()
         {
             Preparation();
-            Thread myThread = new Thread(Start)
-            {
-                Name = "Thread #1"
-            };
-            myThread.Start();
+            Thread thread = new Thread(Start);
+            thread.Start();
         }
 
         public static void Preparation()
@@ -64,12 +60,12 @@ namespace web_cam_bruteforcer
                 bool isInt = int.TryParse(port, out sp);
                 if (!isInt)
                 {
-                    Console.WriteLine("The port must be a number");
+                    Console.WriteLine("The port must be a number. Check file ports.txt!");
                     Environment.Exit(0);
                 }
                 if (sp < 0 || sp > 65535)
                 {
-                    Console.WriteLine("The range of ports should be from 0 to 65535");
+                    Console.WriteLine("The range of ports should be from 0 to 65535. Check file ports.txt!");
                     Environment.Exit(0);
                 }
             }
@@ -116,6 +112,8 @@ namespace web_cam_bruteforcer
                 }));
             }
             Task.WaitAll(tasks.ToArray());
+            Console.WriteLine("\n\nThe process is complete! Press enter to exit.");
+            Console.ReadLine();
         }
 
         public static void BruteCam(string ip, int port, string login, string password)
@@ -151,7 +149,7 @@ namespace web_cam_bruteforcer
                         Console.ResetColor();
                     }
                 }
-                CHCNetSDK.NET_DVR_Logout(uid);
+                CHCNetSDK.NET_DVR_Logout_V30(uid);
             }
         }
 
