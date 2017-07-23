@@ -51,7 +51,10 @@ namespace web_cam_bruteforcer
                 IPAddress ipAddress;
                 bool isGoodHost = IPAddress.TryParse(host, out ipAddress);
                 if (!isGoodHost)
+                {
+                    Console.WriteLine("Verify address " + host);
                     Environment.Exit(0);
+                }
             }
 
             foreach (string port in File.ReadAllLines(PortsFile))
@@ -59,9 +62,15 @@ namespace web_cam_bruteforcer
                 int sp;
                 bool isInt = int.TryParse(port, out sp);
                 if (!isInt)
+                {
+                    Console.WriteLine("The port must be a number");
                     Environment.Exit(0);
+                }
                 if (sp < 0 || sp > 65535)
+                {
+                    Console.WriteLine("The range of ports should be from 0 to 65535");
                     Environment.Exit(0);
+                }
             }
         }
 
