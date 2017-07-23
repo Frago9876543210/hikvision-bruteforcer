@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,6 +45,24 @@ namespace web_cam_bruteforcer
                 Console.WriteLine("Failed to load data");
                 Environment.Exit(0);
             }
+
+            foreach (string host in File.ReadAllLines(IpsFile))
+            {
+                IPAddress ipAddress;
+                bool isGoodHost = IPAddress.TryParse(host, out ipAddress);
+                if (!isGoodHost)
+                    Environment.Exit(0);
+            }
+
+            foreach (string port in File.ReadAllLines(PortsFile))
+            {
+                int sp;
+                bool isInt = int.TryParse(port, out sp);
+                if (!isInt)
+                    Environment.Exit(0);
+                if (sp < 0 || sp > 65535)
+                    Environment.Exit(0);
+            }
         }
 
         public static void Start()
@@ -63,7 +82,6 @@ namespace web_cam_bruteforcer
                 {
                     foreach (string port in ports)
                     {
-                        //TODO: check port and parse
                         int scanPort = int.Parse(port);
                         foreach (string login in logins)
                         {
