@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using HCNetSDK;
+using System.Drawing;
 
 namespace web_cam_bruteforcer
 {
@@ -144,7 +145,9 @@ namespace web_cam_bruteforcer
                     if (CHCNetSDK.NET_DVR_CaptureJPEGPicture(uid, channel, ref netDvrJpegpara, filename))
                     {
                         Console.ForegroundColor = ConsoleColor.Cyan;
-                        Console.WriteLine("Downloaded picture (channel " + channel + ") from the camera " + ip + ":" +
+                        string size = GetImageSize(filename);
+                        Console.WriteLine("Downloaded picture (channel " + channel + ", size " + size +
+                                          ") from the camera " + ip + ":" +
                                           port);
                         Console.ResetColor();
                     }
@@ -167,6 +170,12 @@ namespace web_cam_bruteforcer
                     return false;
                 }
             }
+        }
+
+        public static string GetImageSize(string filename)
+        {
+            Image objImage = Image.FromFile(filename);
+            return objImage.Width + "x" + objImage.Height;
         }
     }
 }
