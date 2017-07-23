@@ -96,9 +96,7 @@ namespace web_cam_bruteforcer
                             {
                                 if (IsListening(ip, scanPort))
                                 {
-                                    {
-                                        BruteCam(ip, scanPort, login, password);
-                                    }
+                                    BruteCam(ip, scanPort, login, password);
                                 }
                                 else
                                 {
