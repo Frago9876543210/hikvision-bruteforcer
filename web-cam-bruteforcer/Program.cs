@@ -94,7 +94,7 @@ namespace web_cam_bruteforcer
                         {
                             foreach (string password in passwords)
                             {
-                                if (IsListening(ip, int.Parse(port)))
+                                if (IsListening(ip, scanPort))
                                 {
                                     {
                                         BruteCam(ip, scanPort, login, password);
