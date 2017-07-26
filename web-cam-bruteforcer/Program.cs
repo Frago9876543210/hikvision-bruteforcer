@@ -49,6 +49,7 @@ namespace web_cam_bruteforcer
                 !File.Exists(PasswordFile))
             {
                 Console.WriteLine("Failed to load data");
+                Console.ReadLine();
                 Environment.Exit(0);
             }
 
@@ -59,6 +60,7 @@ namespace web_cam_bruteforcer
                 if (!isGoodHost)
                 {
                     Console.WriteLine("Verify address " + host);
+                    Console.ReadLine();
                     Environment.Exit(0);
                 }
             }
@@ -70,11 +72,13 @@ namespace web_cam_bruteforcer
                 if (!isInt)
                 {
                     Console.WriteLine("The port must be a number. Check file ports.txt!");
+                    Console.ReadLine();
                     Environment.Exit(0);
                 }
                 if (sp < 0 || sp > 65535)
                 {
                     Console.WriteLine("The range of ports should be from 0 to 65535. Check file ports.txt!");
+                    Console.ReadLine();
                     Environment.Exit(0);
                 }
             }
