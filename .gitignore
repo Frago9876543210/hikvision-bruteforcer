@@ -3,3 +3,4 @@
 web-cam-bruteforcer/bin/*
 web-cam-bruteforcer/obj*
 *.DotSettings.user
+packages/*

