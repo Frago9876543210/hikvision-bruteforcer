@@ -189,6 +189,7 @@ namespace web_cam_bruteforcer
                     byte[] response = new byte[16];
                     networkStream.Read(response, 0, response.Length);
                     tcpClient.Close();
+                    networkStream.Close();
                     return response[3] == 0x10 && response[7] == response[11];
                 }
                 catch (Exception)
