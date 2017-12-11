@@ -1,15 +1,10 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace HCNetSDK
+namespace web_cam_bruteforcer
 {
     public class CHCNetSDK
     {
-        public CHCNetSDK()
-        {
-        }
-
-
         public const int SDK_PLAYMPEG4 = 1;
         public const int SDK_HCNETSDK = 2;
 
